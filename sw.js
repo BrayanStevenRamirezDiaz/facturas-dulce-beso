@@ -1,5 +1,5 @@
-const CACHE = 'facturas-v2';
-const BASE = ['./', 'index.html', 'src/app.js', 'src/factura.js', 'src/pdf.js', 'src/emisor.js', 'src/almacen.js', 'src/logo.js', 'fonts/LiberationSans-Regular.ttf', 'fonts/LiberationSans-Bold.ttf', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'facturas-v3';
+const BASE = ['./', 'index.html', 'assets/logo.png', 'src/app.js', 'src/factura.js', 'src/pdf.js', 'src/emisor.js', 'src/almacen.js', 'src/logo.js', 'fonts/LiberationSans-Regular.ttf', 'fonts/LiberationSans-Bold.ttf', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASE)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(
