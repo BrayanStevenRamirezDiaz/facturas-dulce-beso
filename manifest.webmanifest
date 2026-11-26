@@ -1,0 +1,9 @@
+{
+  "name": "Facturas Dulce Beso",
+  "short_name": "Facturas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff8fb",
+  "theme_color": "#c2185b",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
