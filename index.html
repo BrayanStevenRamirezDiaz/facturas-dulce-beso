@@ -25,6 +25,12 @@
   button { font-size: 1rem; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--cafe); background: var(--campo); color: var(--cafe); }
   button.principal { background: var(--cafe); color: var(--fondo); width: 100%; margin-top: 4px; padding: 14px; border-radius: 10px; font-weight: 700; box-shadow: 0 3px 8px var(--sombra); }
   button.quitar { float: right; padding: 4px 10px; }
+  [hidden] { display: none !important; }
+  .opcion { display: block; text-decoration: none; color: var(--texto); background: color-mix(in srgb, var(--tarj) 85%, transparent); border: 1px solid var(--borde); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px var(--sombra); }
+  .opcion b { display: block; font-size: 1.1rem; color: var(--cafe); text-transform: uppercase; letter-spacing: .8px; }
+  .opcion small { color: var(--suave); }
+  .volver { display: inline-block; color: var(--cafe); text-decoration: none; padding: 6px 0; font-weight: 700; }
+  textarea.concepto { resize: vertical; }
   #errores { color: #d32f2f; margin-top: 12px; white-space: pre-line; }
   #total { font-weight: 600; margin-top: 8px; }
   #historial button { display: block; width: 100%; text-align: left; margin-bottom: 6px; }
@@ -34,7 +40,20 @@
 <img class="marca" src="assets/logo.png" alt="" aria-hidden="true">
 <main>
   <img class="logo" src="assets/logo.png" alt="El Dulce Beso">
-  <h1>Nueva factura</h1>
+  <section id="menu">
+    <h1>¿Qué documento vas a hacer?</h1>
+    <a class="opcion" href="#factura"><b>Factura</b><small>Pedido con productos y entrega</small></a>
+    <a class="opcion" href="#cobro"><b>Cuenta de cobro</b><small>Lo que te deben por un trabajo</small></a>
+    <a class="opcion" href="#cotizacion"><b>Cotización</b><small>Precios para que el cliente apruebe</small></a>
+    <section class="card" style="margin-top: 18px">
+      <h2>Documentos recientes</h2>
+      <div id="historial"></div>
+    </section>
+  </section>
+
+  <section id="editor" hidden>
+  <a class="volver" href="#">‹ Volver</a>
+  <h1 id="titulo">Nueva factura</h1>
   <form id="form" autocomplete="off">
     <section class="card">
       <h2>Fecha</h2>
@@ -51,6 +70,12 @@
       <input id="nit" inputmode="numeric">
     </section>
 
+    <section class="card" data-tipos="cobro">
+      <h2>Por concepto de</h2>
+      <label for="porConcepto">Motivo del cobro</label>
+      <input id="porConcepto" placeholder="productos de Halloween">
+    </section>
+
     <section class="card">
       <h2>Productos</h2>
       <div id="lineas"></div>
@@ -64,17 +89,15 @@
       <input id="entrega" placeholder="5 de diciembre del 2026 a las 4 pm">
       <label for="notas">Notas (envío, etc.)</label>
       <textarea id="notas" rows="2"></textarea>
-      <label for="abono">Abono % (opcional, ej. 50)</label>
-      <input id="abono" type="number" inputmode="numeric" min="1" max="100">
+      <div data-tipos="factura cobro">
+        <label for="abono">Abono % (opcional, ej. 50)</label>
+        <input id="abono" type="number" inputmode="numeric" min="1" max="100">
+      </div>
     </section>
 
     <div id="errores" role="alert"></div>
     <button class="principal" type="submit">Generar PDF</button>
   </form>
-
-  <section class="card" style="margin-top: 14px">
-    <h2>Facturas recientes</h2>
-    <div id="historial"></div>
   </section>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
