@@ -2,6 +2,27 @@ import { calcularFactura, validar, formatoCOP } from './factura.js';
 import { definicionPDF } from './pdf.js';
 import { EMISOR } from './emisor.js';
 import { crearAlmacen } from './almacen.js';
+import { LOGO } from './logo.js';
+
+const ARCHIVOS_FUENTE = { 'LiberationSans-Regular.ttf': 'fonts/LiberationSans-Regular.ttf', 'LiberationSans-Bold.ttf': 'fonts/LiberationSans-Bold.ttf' };
+const FUENTES = {
+  Arial: { normal: 'LiberationSans-Regular.ttf', bold: 'LiberationSans-Bold.ttf', italics: 'LiberationSans-Regular.ttf', bolditalics: 'LiberationSans-Bold.ttf' },
+};
+
+function aBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+let fuentesListas;
+function cargarFuentes() {
+  fuentesListas ??= Promise.all(Object.entries(ARCHIVOS_FUENTE).map(async ([nombre, url]) => {
+    window.pdfMake.vfs[nombre] = aBase64(await (await fetch(url)).arrayBuffer());
+  })).then(() => { window.pdfMake.fonts = FUENTES; }).catch((e) => { fuentesListas = undefined; throw e; });
+  return fuentesListas;
+}
 
 const almacen = crearAlmacen(window.localStorage);
 const $ = (id) => document.getElementById(id);
@@ -81,18 +102,19 @@ function pintarHistorial() {
   }));
 }
 
-function generar(e) {
+async function generar(e) {
   e.preventDefault();
   const datos = leerDatos();
   const errores = validar(datos);
   $('errores').textContent = errores.join('\n');
   if (errores.length) return;
+  try { await cargarFuentes(); } catch { $('errores').textContent = 'No se pudo cargar la fuente. Revisa tu conexión e intenta de nuevo.'; return; }
   const factura = calcularFactura(datos);
   const numero = almacen.siguienteNumero();
   almacen.guardarCliente(datos.cliente);
   almacen.guardarFactura({ numero, total: factura.total, datos });
   const archivo = `${codigo(numero)}-${datos.cliente.nombre.replace(/[^\w]+/g, '_')}.pdf`;
-  window.pdfMake.createPdf(definicionPDF(factura, EMISOR)).download(archivo);
+  window.pdfMake.createPdf(definicionPDF(factura, EMISOR, LOGO)).download(archivo);
   pintarClientes();
   pintarHistorial();
 }

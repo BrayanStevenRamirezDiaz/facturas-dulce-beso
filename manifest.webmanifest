@@ -3,7 +3,7 @@
   "short_name": "Facturas",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#fff8fb",
-  "theme_color": "#c2185b",
+  "background_color": "#faf5ee",
+  "theme_color": "#4a2c20",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }

@@ -65,3 +65,28 @@ test('todas las filas de la tabla tienen el mismo número de celdas', () => {
     assert.ok(body.every((r) => r.length === body[0].length));
   }
 });
+
+test('fuente Arial y colores sobrios (café y crema)', () => {
+  const def = definicionPDF(semrex, EMISOR);
+  assert.equal(def.defaultStyle.font, 'Arial');
+  const encabezado = tabla(def).body[0][0];
+  assert.equal(encabezado.fillColor, '#e8d9c4');
+  assert.equal(def.content[0].color, '#4a2c20');
+});
+
+test('sin logo no hay imágenes; con logo: marca de agua al 15% y logo arriba centrado', () => {
+  const sin = definicionPDF(semrex, EMISOR);
+  assert.equal(sin.background, undefined);
+  assert.ok(!sin.content.some((n) => n.image));
+
+  const con = definicionPDF(semrex, EMISOR, 'data:image/png;base64,AAA');
+  const fondo = con.background(1, { width: 612, height: 792 });
+  assert.equal(fondo.image, 'data:image/png;base64,AAA');
+  assert.equal(fondo.opacity, 0.15);
+  assert.equal(fondo.width, 400);
+  assert.deepEqual(fondo.absolutePosition, { x: 106, y: 396 - (400 * 213) / 370 / 2 });
+  const arriba = con.content[0];
+  assert.equal(arriba.image, 'data:image/png;base64,AAA');
+  assert.equal(arriba.alignment, 'center');
+  assert.equal(arriba.width, 110);
+});
