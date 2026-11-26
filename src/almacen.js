@@ -1,4 +1,9 @@
+import { TIPO_POR_DEFECTO } from './tipos.js';
+
 const LIMITE_HISTORIAL = 50;
+
+// La factura conserva la clave original para no reiniciar la numeración de quien ya la usa.
+const claveContador = (tipo) => (tipo === TIPO_POR_DEFECTO ? 'consecutivo' : `consecutivo_${tipo}`);
 
 export function crearAlmacen(storage) {
   const respaldo = new Map();
@@ -24,9 +29,10 @@ export function crearAlmacen(storage) {
       const otros = this.clientes().filter((x) => x.nombre.toLowerCase() !== nombre.toLowerCase());
       escribir('clientes', [...otros, { nombre, nit: (c.nit || '').trim() }].sort((a, b) => a.nombre.localeCompare(b.nombre)));
     },
-    siguienteNumero() {
-      const n = leer('consecutivo', 0) + 1;
-      escribir('consecutivo', n);
+    siguienteNumero(tipo = TIPO_POR_DEFECTO) {
+      const clave = claveContador(tipo);
+      const n = leer(clave, 0) + 1;
+      escribir(clave, n);
       return n;
     },
     historial: () => leer('historial', []),

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calcularFactura } from '../src/factura.js';
+import { calcularDocumento } from '../src/factura.js';
 import { definicionPDF } from '../src/pdf.js';
 import { EMISOR } from '../src/emisor.js';
 
@@ -15,12 +15,12 @@ const textos = (nodo, acc = []) => {
 const todo = (def) => textos(def.content).join('\n');
 const tabla = (def) => def.content.find((n) => n.table).table;
 
-const semrex = calcularFactura({
+const semrex = calcularDocumento({
   fecha: '2026-11-24', cliente: { nombre: 'SEMREX', nit: '830100953-4' },
   lineas: [{ concepto: 'Cupcakes con decoración navideña', cantidad: 200, valorUnitario: 3500 }],
   notas: 'Envío incluido a Bosa Carbonell', abonoPct: 50,
 });
-const carolina = calcularFactura({
+const carolina = calcularDocumento({
   fecha: '2026-11-24', cliente: { nombre: 'CAROLINA', nit: '' },
   lineas: [{ concepto: 'Torta', cantidad: 2, masa: 'Tres leches', porciones: 60, valorUnitario: 100000 }],
   entrega: '5 de diciembre del 2026 a las 4 pm',
@@ -89,4 +89,54 @@ test('sin logo no hay imágenes; con logo: marca de agua al 15% y logo arriba ce
   assert.equal(arriba.image, 'data:image/png;base64,AAA');
   assert.equal(arriba.alignment, 'center');
   assert.equal(arriba.width, 110);
+});
+
+const cotizacion = calcularDocumento({
+  tipo: 'cotizacion', fecha: '2026-10-27', cliente: { nombre: 'GI GROUP SERVICIOS S.A.S.', nit: '800.151.175-1' },
+  lineas: [
+    { concepto: 'Refrigerios' + String.fromCharCode(10) + 'Mini hamburguesa artesanal', cantidad: 55, valorUnitario: 8000 },
+    { concepto: 'Domicilio', cantidad: 1, valorUnitario: 30000 },
+  ],
+});
+const cobro = calcularDocumento({
+  tipo: 'cobro', fecha: '2026-10-27', cliente: { nombre: 'JEANSCO S.A.S', nit: '901.914.035-9' }, porConcepto: 'productos de Halloween',
+  lineas: [{ concepto: 'Cupcakes', cantidad: 101, valorUnitario: 3500 }, { concepto: 'Todo lo demás', cantidad: 1, valorUnitario: 860500 }],
+  abonoPct: 50, notas: 'Gracias',
+});
+
+const encabezados = (def) => tabla(def).body[0].map((c) => c.text);
+
+test('cotización: título, mensaje, 4 columnas, concepto en varias líneas y sin abono', () => {
+  const def = definicionPDF(cotizacion, EMISOR);
+  const t = todo(def);
+  assert.ok(t.includes('COTIZACIÓN') && !t.includes('FACTURA'));
+  assert.ok(t.includes('Damos respuesta a la solicitud presentada por ustedes para la cotización de los siguientes productos'));
+  assert.deepEqual(encabezados(def), ['CONCEPTO', 'CANTIDAD', 'VALOR UNITARIO', 'VALOR TOTAL']);
+  assert.equal(tabla(def).body[1][0].text, 'Refrigerios' + String.fromCharCode(10) + 'Mini hamburguesa artesanal');
+  assert.ok(t.includes('$470.000'));
+  assert.ok(t.includes('La siguiente se firma a los 27 días del mes de OCTUBRE del 2026.'));
+  assert.ok(!t.includes('abono'));
+});
+
+test('cuenta de cobro: título, frase con total en letras, 3 columnas, abono en letras', () => {
+  const def = definicionPDF(cobro, EMISOR);
+  const t = todo(def);
+  assert.ok(t.includes('CUENTA DE COBRO'));
+  assert.ok(t.includes('JEANSCO S.A.S debe a POSTRES EL DULCE BESO por concepto de productos de Halloween por el valor total de ($1.214.000) un millón doscientos catorce mil pesos.'));
+  assert.ok(!t.includes('Damos respuesta'));
+  assert.deepEqual(encabezados(def), ['CONCEPTO', 'UNIDADES', 'VALOR TOTAL']);
+  assert.ok(!t.includes('$3.500') && t.includes('$353.500'));
+  assert.ok(t.includes('Iniciamos labores con un abono del 50% que es ($607.000) seiscientos siete mil pesos y el pago del otro 50% se realizará apenas terminemos labores.'));
+  assert.ok(t.includes('Gracias'));
+  assert.equal(tabla(def).body.at(-1).length, 3);
+});
+
+test('los tres documentos comparten forma: logo arriba, marca de agua, Arial y declaración', () => {
+  for (const d of [semrex, cotizacion, cobro]) {
+    const def = definicionPDF(d, EMISOR, 'data:image/png;base64,AAA');
+    assert.equal(def.content[0].image, 'data:image/png;base64,AAA');
+    assert.equal(def.background(1, { width: 612, height: 792 }).opacity, 0.15);
+    assert.equal(def.defaultStyle.font, 'Arial');
+    assert.ok(todo(def).includes('decreto 1070 y 3032 de 2013'));
+  }
 });

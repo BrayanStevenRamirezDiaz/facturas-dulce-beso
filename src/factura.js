@@ -1,23 +1,5 @@
-const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-
-export function formatoCOP(n) {
-  return '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-function partesFecha(iso) {
-  const [anio, mes, dia] = iso.split('-').map(Number);
-  return { anio, mes: MESES[mes - 1], dia };
-}
-
-export function fechaLarga(iso) {
-  const { anio, mes, dia } = partesFecha(iso);
-  return `${dia} de ${mes} ${anio}`;
-}
-
-export function fraseFirma(iso) {
-  const { anio, mes, dia } = partesFecha(iso);
-  return `La siguiente se firma a los ${dia} días del mes de ${mes} del ${anio}.`;
-}
+import { formatoCOP } from './formato.js';
+import { TIPOS, claveDeTipo } from './tipos.js';
 
 function calcularAbono(total, pct) {
   if (!pct) return null;
@@ -25,21 +7,30 @@ function calcularAbono(total, pct) {
   return { pct, valor, saldo: total - valor };
 }
 
-export function calcularFactura(datos) {
+const sumaTotal = (lineas) => lineas.reduce((s, l) => s + l.cantidad * l.valorUnitario, 0);
+const LIMITE_TOTAL = 999999999;
+
+export function calcularDocumento(datos) {
+  const clave = claveDeTipo(datos);
+  const tipo = TIPOS[clave];
   const lineas = datos.lineas.map((l) => ({ ...l, valorTotal: l.cantidad * l.valorUnitario }));
   const total = lineas.reduce((s, l) => s + l.valorTotal, 0);
+  const conValor = (campo) => lineas.some((l) => Boolean(l[campo]));
   return {
+    tipo: clave,
     fecha: datos.fecha,
     cliente: datos.cliente,
     lineas,
     total,
     columnas: {
-      masa: lineas.some((l) => Boolean(l.masa)),
-      porciones: lineas.some((l) => Boolean(l.porciones)),
+      masa: tipo.columnas.masa && conValor('masa'),
+      porciones: tipo.columnas.porciones && conValor('porciones'),
+      unitario: tipo.columnas.unitario,
     },
-    abono: calcularAbono(total, datos.abonoPct),
-    entrega: datos.entrega || '',
-    notas: datos.notas || '',
+    abono: tipo.acepta.abono ? calcularAbono(total, datos.abonoPct) : null,
+    entrega: tipo.acepta.entrega ? datos.entrega || '' : '',
+    notas: tipo.acepta.notas ? datos.notas || '' : '',
+    porConcepto: tipo.acepta.porConcepto ? (datos.porConcepto || '').trim() : '',
   };
 }
 
@@ -52,14 +43,24 @@ function erroresLinea(l, i) {
   return errs;
 }
 
+function erroresDelTipo(datos, tipo) {
+  const errs = [];
+  if (tipo.acepta.porConcepto && !(datos.porConcepto || '').trim()) errs.push('Falta el "por concepto de"');
+  const pct = datos.abonoPct;
+  if (tipo.acepta.abono && pct !== undefined && pct !== null && !(pct >= 1 && pct <= 100)) errs.push('El abono debe estar entre 1 y 100');
+  return errs;
+}
+
 export function validar(datos) {
+  const tipo = TIPOS[claveDeTipo(datos)];
+  if (!tipo) return ['Tipo de documento no válido'];
   const errs = [];
   if (!datos.cliente || !datos.cliente.nombre || !datos.cliente.nombre.trim()) errs.push('Falta el nombre del cliente');
   if (!datos.fecha) errs.push('Falta la fecha');
   if (!datos.lineas || datos.lineas.length === 0) errs.push('Agrega al menos un producto');
-  else datos.lineas.forEach((l, i) => errs.push(...erroresLinea(l, i)));
-  if (datos.abonoPct !== undefined && datos.abonoPct !== null && !(datos.abonoPct >= 1 && datos.abonoPct <= 100)) {
-    errs.push('El abono debe estar entre 1 y 100');
+  else {
+    datos.lineas.forEach((l, i) => errs.push(...erroresLinea(l, i)));
+    if (sumaTotal(datos.lineas) > LIMITE_TOTAL) errs.push(`El total no puede superar ${formatoCOP(LIMITE_TOTAL)}`);
   }
-  return errs;
+  return [...errs, ...erroresDelTipo(datos, tipo)];
 }

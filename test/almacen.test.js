@@ -39,3 +39,28 @@ test('si el almacenamiento falla, sigue funcionando en memoria', () => {
   assert.equal(a.siguienteNumero(), 1);
   assert.equal(a.siguienteNumero(), 2);
 });
+
+test('el consecutivo cuenta aparte para cada tipo de documento', () => {
+  const a = crearAlmacen(memoria());
+  assert.equal(a.siguienteNumero('factura'), 1);
+  assert.equal(a.siguienteNumero('cotizacion'), 1);
+  assert.equal(a.siguienteNumero('cobro'), 1);
+  assert.equal(a.siguienteNumero('cobro'), 2);
+  assert.equal(a.siguienteNumero('factura'), 2);
+  assert.equal(a.siguienteNumero(), 3, 'sin tipo cuenta como factura');
+});
+
+test('un celular que ya tenía facturas sigue su numeración (clave "consecutivo")', () => {
+  const s = memoria();
+  s.setItem('consecutivo', '7');
+  const a = crearAlmacen(s);
+  assert.equal(a.siguienteNumero('factura'), 8);
+  assert.equal(a.siguienteNumero('cotizacion'), 1);
+  assert.equal(s.getItem('consecutivo'), '8');
+});
+
+test('el historial conserva el tipo de cada documento', () => {
+  const a = crearAlmacen(memoria());
+  a.guardarFactura({ tipo: 'cobro', numero: 1 });
+  assert.equal(a.historial()[0].tipo, 'cobro');
+});
